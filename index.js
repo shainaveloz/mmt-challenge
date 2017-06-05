@@ -32,114 +32,121 @@ d3.json("stock.json", function(error, data) {
         minutes = (minutes < 10) ? "0" + minutes : minutes;
         seconds = (seconds < 10) ? "0" + seconds : seconds;
 
-        return hours + ":" + minutes + ":" + seconds + "." + milliseconds + "."+nanoseconds;
+        return hours + ":" + minutes + ":" + seconds + "." + milliseconds + "."+ nanoseconds;
     }
 
-    var format = d3.time.format("%I%M%p");
+    var format = d3.timeParse("%X");
+
 
     bbo.forEach(function(time, d) {
         var bboTime = time.timeStr;
-        parseInt(bboTime, 10);
-        console.log(nsToTime(parseInt(bboTime, 10)));
-        d.bboTime = format(d.bboTime);
+        var ask = time.ask;
+        var bid = time.bid;
+        //console.log(parseInt(bboTime, 10));
+        d.bboTime = format(parseInt(bboTime, 10));
         d["bboTime"]= +d["bboTime"];
+        d["ask"]= +d["ask"];
+        d["bid"]= +d["bid"];
     });
 
     tradeList.forEach(function(trade, d) {
         var tradeTime = moment(trade.time);
+        var price = trade.price;
         nsToTime(tradeTime);
         d.tradeTime = format(d.tradeTime);
         d["tradeTime"] = +d["tradeTime"];
-        console.log(nsToTime(tradeTime));
+        d["price"] = +d["price"];
     });
 
-    x.domain(d3.extent(bbo, function(time) { return time.bbo.bboTime; }));
-    x.domain(d3.extent(tradeList, function(time) { return time.tradeList.tradeTime; }));
+    initialize();
 });
 
-var margin = {top: 20, right: 20, bottom: 30, left: 50},
-    width = 960 - margin.left - margin.right,
-    height = 500 - margin.top - margin.bottom;
+function initialize(){
+    var svg = d3.select("svg"),
+        margin = {top: 20, right: 20, bottom: 30, left: 50},
+        width = +svg.attr("width") - margin.left - margin.right,
+        height = +svg.attr("height") - margin.top - margin.bottom,
+        g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
 
+    var x = d3.scaleTime()
+        .range([0, width]);
 
-var x = d3.scaleTime()
-    .range([0, width]);
+    var y = d3.scaleLinear()
+        .range([height, 0]);
 
-var y = d3.scaleLinear()
-    .range([height, 0]);
+    var xAxis = d3.axisBottom(x);
 
-var xAxis = d3.svg.axisBottom(x)
+    var yAxis = d3.axisLeft(y);
 
-var yAxis = d3.svg.axisLeft(y)
+    var line = d3.area()
+        .x(function(d) { return x(d.bboTime); })
+        .y(function(d) { return y(d.tradeTime.price); })
 
-var line = d3.svg.area()
-    .x(function(d) { return x(d.bboList.timeStr); })
-    .y(function(d) { return y(d["bboList"]); });
+    var area = d3.area()
+        .curve(d3.curveStepAfter)
+        .x0(function(d){ return x(d.bboTime);})
+        .y0(function(d) { return y(d.bboTime.ask); })
+        .y1(function(d) { return y(d.bboTime.bid); });
 
-var area = d3.svg.area()
-    .curve(d3.curveStepAfter())
-    .x0(function(d){ return x(d.bboTime);})
-    .y0(function(d) { return y(d.bbo.ask); })
-    .y1(function(d) { return y(d.bbo.bid); });
+    x.domain(d3.extent(bbo, function(time) { return time.bboTime; }));
+    //x.domain(d3.extent(tradeList, function(time) { return time.tradeTime; }));
 
-var area2 = d3.svg.area()
-    .curve(d3.curveStepAfter())
-    .x(function(d) { return x(data.tradeList.time); })
-    .y1(function(d) { return y(d.bbo.price); });
+    g.append("clipPath")
+        .attr("id", "clip-below")
+        .append("path")
+        .attr("d", area.lineY0(height));
 
-var svg = d3.select("body").append("svg")
-    .attr("width", width + margin.left + margin.right)
-    .attr("height", height + margin.top + margin.bottom)
-    .append("g")
-    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+    g.append("path")
+        .datum(data)
+        .attr("fill", "steelblue")
+        .attr("d", area);
 
+    g.append("g")
+        .attr("transform", "translate(0," + height + ")")
+        .call(xAxis);
 
-// function update(){
-// //x.domain(d3.extent(data, function(d) { return d.bboList.timeStr; }));
-//
-// y.domain([
-//     d3.min(data, function(d) { return Math.min(d["bboList"], d["tradeList"]); }),
-//     d3.max(data, function(d) { return Math.max(d["bboList"], d["tradeList"]); })
-// ]);
-//
-// svg.datum(data);
-//
-// svg.append("clipPath")
-//     .attr("id", "clip-below")
-//     .append("path")
-//     .attr("d", area.y0(height));
-//
-// svg.append("clipPath")
-//     .attr("id", "clip-above")
-//     .append("path")
-//     .attr("d", area.y0(0));
-//
-// svg.append("path")
-//     .attr("class", "area above")
-//     .attr("clip-path", "url(#clip-above)")
-//     .attr("d", area.y0(function(d) { return y(d["San Francisco"]); }));
-//
-// svg.append("path")
-//     .attr("class", "area below")
-//     .attr("clip-path", "url(#clip-below)")
-//     .attr("d", area);
-//
-// svg.append("path")
-//     .attr("class", "line")
-//     .attr("d", line);
-//
-// svg.append("g")
-//     .attr("class", "x axis")
-//     .attr("transform", "translate(0," + height + ")")
-//     .call(xAxis);
-//
-// svg.append("g")
-//     .attr("class", "y axis")
-//     .call(yAxis)
-//     .append("text")
-//     .attr("transform", "rotate(-90)")
-//     .attr("y", 6)
-//     .attr("dy", ".71em")
-//     .style("text-anchor", "end")
-//     .text("Price ($)");
-// };
+    g.append("g")
+        .call(yAxis)
+        .append("text")
+        .attr("fill", "#000")
+        .attr("transform", "rotate(-90)")
+        .attr("y", 6)
+        .attr("dy", "0.71em")
+        .attr("text-anchor", "end")
+        .text("Price ($)");
+
+}
+
+    // svg.append("clipPath")
+    //     .attr("id", "clip-above")
+    //     .append("path")
+    //     .attr("d", area.y0(0));
+    //
+    // svg.append("path")
+    //     .attr("class", "area above")
+    //     .attr("clip-path", "url(#clip-above)")
+    //     .attr("d", area.y0(function(d) { return y(d["tradeList"]); }));
+    //
+    // svg.append("path")
+    //     .attr("class", "area below")
+    //     .attr("clip-path", "url(#clip-below)")
+    //     .attr("d", area);
+    //
+    // svg.append("path")
+    //     .attr("class", "line")
+    //     .attr("d", line);
+    //
+    // svg.append("g")
+    //     .attr("class", "x axis")
+    //     .attr("transform", "translate(0," + height + ")")
+    //     .call(xAxis);
+    //
+    // svg.append("g")
+    //     .attr("class", "y axis")
+    //     .call(yAxis)
+    //     .append("text")
+    //     .attr("transform", "rotate(-90)")
+    //     .attr("y", 6)
+    //     .attr("dy", ".71em")
+    //     .style("text-anchor", "end")
+    //     .text("Price ($)");
