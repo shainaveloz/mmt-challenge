@@ -2,8 +2,7 @@ d3.json("stock.json", function(error, data) {
     if (error) throw error;
     console.log(data);
 
-
-    var bbo = data.bboList.map(function(stocks){
+    var bboList = data.bboList.map(function(stocks){
         return{
             ask: stocks.ask,
             bid: stocks.bid,
@@ -21,6 +20,7 @@ d3.json("stock.json", function(error, data) {
         }
     });
 
+
     function nsToTime(duration) {
         var nanoseconds = parseInt((duration%10000)/1000),
             milliseconds = parseInt((duration%1000)/100)
@@ -36,117 +36,117 @@ d3.json("stock.json", function(error, data) {
     }
 
     var format = d3.timeParse("%X");
+    var times = [];
+    var priceArray = [];
+    var askArray = [];
+    var bidArray = [];
+    var bboTimes = [];
 
+    for(var i = 0; i<bboList.length; i++){
+        var ask = ((bboList[i].ask)/10000).toFixed(2);
+        var bid = ((bboList[i].bid)/10000).toFixed(2);
+        var bboTimeArray = bboList[i].timeStr;
 
-    bbo.forEach(function(time, d) {
-        var bboTime = time.timeStr;
-        var ask = time.ask;
-        var bid = time.bid;
-        //console.log(parseInt(bboTime, 10));
-        d.bboTime = format(parseInt(bboTime, 10));
-        d["bboTime"]= +d["bboTime"];
-        d["ask"]= +d["ask"];
-        d["bid"]= +d["bid"];
+        times.push(bboTimeArray);
+        askArray.push(ask);
+        bidArray.push(bid);
+        bboTimes.push(bboTimeArray);
+        //console.log(bid);
+        //console.log(ask);
+        //console.log(bboTimeArray.length);
+    }
+
+    for(var j = 0; j<tradeList.length; j++){
+        var tradeTime = nsToTime(tradeList[j].time);
+        var tradePrice = ((tradeList[j].price)/10000).toFixed(2);
+
+        times.push(tradeTime);
+        priceArray.push(tradePrice);
+        //console.log(tradeTimeArray.length);
+        //console.log(tradePriceArray);
+        //console.log(tradePrice)
+    }
+
+    var newTimes = times.sort();
+    var newPrices = priceArray.sort();
+    var newAskArray = askArray.sort();
+    var newBidArray = bidArray.sort();
+    var newBboTimesArray = bboTimes.sort();
+    console.log(newTimes);
+    console.log(priceArray);
+
+    newPrices.forEach(function(d){
+        d.newPrices = +d.newPrices
     });
 
-    tradeList.forEach(function(trade, d) {
-        var tradeTime = moment(trade.time);
-        var price = trade.price;
-        nsToTime(tradeTime);
-        d.tradeTime = format(d.tradeTime);
-        d["tradeTime"] = +d["tradeTime"];
-        d["price"] = +d["price"];
+    newTimes.forEach(function(d){
+        d.newTimes = format(d.newTimes)
     });
+
+    newAskArray.forEach(function(d){
+        d.newAskArray = +d.newAskArray
+    });
+
+    newBidArray.forEach(function(d){
+        d.newBidArray = +d.newBidArray
+    });
+
+    newBboTimesArray.forEach(function(d){
+        d.newBboTimesArray = format(d.newBboTimesArray)
+    });
+
+    function initialize(){
+        var svg = d3.select("svg"),
+            margin = {top: 20, right: 20, bottom: 30, left: 50},
+            width = +svg.attr("width") - margin.left - margin.right,
+            height = +svg.attr("height") - margin.top - margin.bottom,
+            g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+        var x = d3.scaleTime()
+            .range([0, width]);
+
+        var y = d3.scaleLinear()
+            .range([height, 0]);
+
+        var xAxis = d3.axisBottom(x);
+
+        var yAxis = d3.axisLeft(y);
+
+        var area = d3.area()
+            .curve(d3.curveStepAfter)
+            .x0(function(d){ return x(d.newBboTimesArray);})
+            .y0(function(d) { return y(d.newAskArray); })
+            .y1(function(d) { return y(d.newBidArray); });
+
+        x.domain(d3.extent(newTimes, function(d) { return d.newTimes; }));
+        y.domain([0, d3.max(newPrices, function(d) { return d.newPrices; })]);
+        area.y0(y(0));
+
+        // g.append("clipPath")
+        //     .attr("id", "clip-below")
+        //     .append("path")
+        //     .attr("d", area.y0(y(0)));
+
+        g.append("path")
+            .datum([newBboTimesArray])
+            .attr("fill", "steelblue")
+            .attr("d", area);
+
+        g.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(xAxis);
+
+        g.append("g")
+            .call(yAxis)
+            .append("text")
+            .attr("fill", "#000")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", "0.71em")
+            .attr("text-anchor", "end")
+            .text("Price ($)");
+
+    }
 
     initialize();
 });
-
-function initialize(){
-    var svg = d3.select("svg"),
-        margin = {top: 20, right: 20, bottom: 30, left: 50},
-        width = +svg.attr("width") - margin.left - margin.right,
-        height = +svg.attr("height") - margin.top - margin.bottom,
-        g = svg.append("g").attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-    var x = d3.scaleTime()
-        .range([0, width]);
-
-    var y = d3.scaleLinear()
-        .range([height, 0]);
-
-    var xAxis = d3.axisBottom(x);
-
-    var yAxis = d3.axisLeft(y);
-
-    var line = d3.area()
-        .x(function(d) { return x(d.bboTime); })
-        .y(function(d) { return y(d.tradeTime.price); })
-
-    var area = d3.area()
-        .curve(d3.curveStepAfter)
-        .x0(function(d){ return x(d.bboTime);})
-        .y0(function(d) { return y(d.bboTime.ask); })
-        .y1(function(d) { return y(d.bboTime.bid); });
-
-    x.domain(d3.extent(bbo, function(time) { return time.bboTime; }));
-    //x.domain(d3.extent(tradeList, function(time) { return time.tradeTime; }));
-
-    g.append("clipPath")
-        .attr("id", "clip-below")
-        .append("path")
-        .attr("d", area.lineY0(height));
-
-    g.append("path")
-        .datum(data)
-        .attr("fill", "steelblue")
-        .attr("d", area);
-
-    g.append("g")
-        .attr("transform", "translate(0," + height + ")")
-        .call(xAxis);
-
-    g.append("g")
-        .call(yAxis)
-        .append("text")
-        .attr("fill", "#000")
-        .attr("transform", "rotate(-90)")
-        .attr("y", 6)
-        .attr("dy", "0.71em")
-        .attr("text-anchor", "end")
-        .text("Price ($)");
-
-}
-
-    // svg.append("clipPath")
-    //     .attr("id", "clip-above")
-    //     .append("path")
-    //     .attr("d", area.y0(0));
-    //
-    // svg.append("path")
-    //     .attr("class", "area above")
-    //     .attr("clip-path", "url(#clip-above)")
-    //     .attr("d", area.y0(function(d) { return y(d["tradeList"]); }));
-    //
-    // svg.append("path")
-    //     .attr("class", "area below")
-    //     .attr("clip-path", "url(#clip-below)")
-    //     .attr("d", area);
-    //
-    // svg.append("path")
-    //     .attr("class", "line")
-    //     .attr("d", line);
-    //
-    // svg.append("g")
-    //     .attr("class", "x axis")
-    //     .attr("transform", "translate(0," + height + ")")
-    //     .call(xAxis);
-    //
-    // svg.append("g")
-    //     .attr("class", "y axis")
-    //     .call(yAxis)
-    //     .append("text")
-    //     .attr("transform", "rotate(-90)")
-    //     .attr("y", 6)
-    //     .attr("dy", ".71em")
-    //     .style("text-anchor", "end")
-    //     .text("Price ($)");
