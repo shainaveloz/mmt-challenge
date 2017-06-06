@@ -54,9 +54,6 @@ d3.json("stock.json", function(error, data) {
         askArray.push(ask);
         bidArray.push(bid);
         bboTimes.push(bboTimeArray);
-        //console.log(bid);
-        //console.log(ask);
-        //console.log(bboTimeArray.length);
     }
 
     //Loop through tradeList to put data into an empty array
@@ -68,9 +65,6 @@ d3.json("stock.json", function(error, data) {
 
         times.push(tradeTime);
         priceArray.push(tradePrice);
-        //console.log(tradeTimeArray.length);
-        //console.log(tradePriceArray);
-        //console.log(tradePrice)
     }
 
     var newTimes = times.sort();
@@ -78,49 +72,43 @@ d3.json("stock.json", function(error, data) {
     var newAskArray = askArray.sort();
     var newBidArray = bidArray.sort();
     var newBboTimesArray = bboTimes.sort();
-    //console.log(newTimes);
-    //console.log(priceArray);
+
+    //Create empty object for chart data
+    //Push in other arrays into this one
+    var chartData = {
+        times: newTimes,
+        prices: newPrices,
+        bboAsk: newAskArray,
+        bids: newBidArray,
+        bboTimes: newBboTimesArray
+    };
+    console.log(chartData);
 
     //Make new arrays available for the graph
-    newPrices.forEach(function(d){
-        d.newPrices = +d.newPrices
+    chartData.times.forEach(function(d){
+        d.times = format(d.times);
+        console.log(d.times);
     });
 
-    newTimes.forEach(function(d){
-        d.newTimes = format(d.newTimes)
+    chartData.prices.forEach(function(d){
+        d.prices = +d.prices;
+        console.log(d.prices);
     });
 
-    newAskArray.forEach(function(d){
-        d.newAskArray = +d.newAskArray
+    chartData.bboAsk.forEach(function(d){
+        d.bboAsk = +d.bboAsk;
+        console.log(d.bboAsk);
     });
 
-    newBidArray.forEach(function(d){
-        d.newBidArray = +d.newBidArray
+    chartData.bids.forEach(function(d){
+        d.bids = +d.bids;
+        console.log(d.bids);
     });
 
-    newBboTimesArray.forEach(function(d){
-        d.newBboTimesArray = format(d.newBboTimesArray)
+    chartData.bboTimes.forEach(function(d){
+        d.bboTimes = format(d.bboTimes);
+        console.log(d.bboTimes);
     });
-
-    //Create empty array for chart data
-    //Push in other arrays into this one
-    var chartData = [];
-    chartData.push(newPrices, newTimes, newAskArray, newBboTimesArray, newBidArray);
-    //console.log(chartData.push(newPrices, newTimes, newAskArray, newBboTimesArray, newBidArray));
-    //console.log(chartData);
-
-    //Map out data for graph
-    for(var l = 0; l < chartData.length; l++){
-        //console.log(chartData[l]);
-        var times = chartData[1];
-        var prices = chartData[0];
-        var bboAsk = chartData[2];
-        var bids = chartData[4];
-        var bboTimes = chartData[3];
-    };
-
-    console.log(bboTimes);
-    console.log(bids);
 
     //Create a function for the creation of the graph
     function initialize(){
@@ -142,15 +130,12 @@ d3.json("stock.json", function(error, data) {
 
         var area = d3.area()
             .curve(d3.curveStepAfter)
-            .x0(function(){ return x(bboTimes);})
-            .y0(function() { return y(bboAsk); })
-            .y1(function() { return y(bids); });
+            .x0(function(d){ return x(d.bboTimes);})
+            .y0(function(d) { return y(d.bboAsk); })
+            .y1(function(d) { return y(d.bids); });
 
-        x.domain(d3.extent(chartData, function() { return times; }));
-        y.domain(d3.extent[
-            d3.min(chartData[l], function(){return Math.min([bids],[bboAsk]);}),
-            d3.max(chartData[l], function(){return Math.max([bids],[bboAsk]);})
-        ]);
+        x.domain(d3.extent(chartData, function(d) { return d.times; }));
+        y.domain([0, d3.max(chartData, function(d) { return d.prices; })]);
         area.y0(height);
 
         g.append("path")
@@ -171,7 +156,6 @@ d3.json("stock.json", function(error, data) {
             .attr("dy", "0.71em")
             .attr("text-anchor", "end")
             .text("Price ($)");
-
     }
 
     initialize();
