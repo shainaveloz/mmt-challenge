@@ -2,6 +2,7 @@ d3.json("stock.json", function(error, data) {
     if (error) throw error;
     console.log(data);
 
+    //map out objects
     var bboList = data.bboList.map(function(stocks){
         return{
             ask: stocks.ask,
@@ -20,7 +21,7 @@ d3.json("stock.json", function(error, data) {
         }
     });
 
-
+    //create function for converting times
     function nsToTime(duration) {
         var nanoseconds = parseInt((duration%10000)/1000),
             milliseconds = parseInt((duration%1000)/100)
@@ -42,7 +43,9 @@ d3.json("stock.json", function(error, data) {
     var bidArray = [];
     var bboTimes = [];
 
+    //Loop through bboList to put data into an empty array
     for(var i = 0; i<bboList.length; i++){
+        //convert hundreds of pennies to dollars
         var ask = ((bboList[i].ask)/10000).toFixed(2);
         var bid = ((bboList[i].bid)/10000).toFixed(2);
         var bboTimeArray = bboList[i].timeStr;
@@ -56,7 +59,10 @@ d3.json("stock.json", function(error, data) {
         //console.log(bboTimeArray.length);
     }
 
+    //Loop through tradeList to put data into an empty array
     for(var j = 0; j<tradeList.length; j++){
+        //convert hundreds of pennies to dollars
+        //use time converter to change time format
         var tradeTime = nsToTime(tradeList[j].time);
         var tradePrice = ((tradeList[j].price)/10000).toFixed(2);
 
@@ -72,9 +78,10 @@ d3.json("stock.json", function(error, data) {
     var newAskArray = askArray.sort();
     var newBidArray = bidArray.sort();
     var newBboTimesArray = bboTimes.sort();
-    console.log(newTimes);
-    console.log(priceArray);
+    //console.log(newTimes);
+    //console.log(priceArray);
 
+    //Make new arrays available for the graph
     newPrices.forEach(function(d){
         d.newPrices = +d.newPrices
     });
@@ -95,6 +102,27 @@ d3.json("stock.json", function(error, data) {
         d.newBboTimesArray = format(d.newBboTimesArray)
     });
 
+    //Create empty array for chart data
+    //Push in other arrays into this one
+    var chartData = [];
+    chartData.push(newPrices, newTimes, newAskArray, newBboTimesArray, newBidArray);
+    //console.log(chartData.push(newPrices, newTimes, newAskArray, newBboTimesArray, newBidArray));
+    //console.log(chartData);
+
+    //Map out data for graph
+    for(var l = 0; l < chartData.length; l++){
+        //console.log(chartData[l]);
+        var times = chartData[1];
+        var prices = chartData[0];
+        var bboAsk = chartData[2];
+        var bids = chartData[4];
+        var bboTimes = chartData[3];
+    };
+
+    console.log(bboTimes);
+    console.log(bids);
+
+    //Create a function for the creation of the graph
     function initialize(){
         var svg = d3.select("svg"),
             margin = {top: 20, right: 20, bottom: 30, left: 50},
@@ -114,21 +142,19 @@ d3.json("stock.json", function(error, data) {
 
         var area = d3.area()
             .curve(d3.curveStepAfter)
-            .x0(function(d){ return x(d.newBboTimesArray);})
-            .y0(function(d) { return y(d.newAskArray); })
-            .y1(function(d) { return y(d.newBidArray); });
+            .x0(function(){ return x(bboTimes);})
+            .y0(function() { return y(bboAsk); })
+            .y1(function() { return y(bids); });
 
-        x.domain(d3.extent(newTimes, function(d) { return d.newTimes; }));
-        y.domain([0, d3.max(newPrices, function(d) { return d.newPrices; })]);
-        area.y0(y(0));
-
-        // g.append("clipPath")
-        //     .attr("id", "clip-below")
-        //     .append("path")
-        //     .attr("d", area.y0(y(0)));
+        x.domain(d3.extent(chartData, function() { return times; }));
+        y.domain(d3.extent[
+            d3.min(chartData[l], function(){return Math.min([bids],[bboAsk]);}),
+            d3.max(chartData[l], function(){return Math.max([bids],[bboAsk]);})
+        ]);
+        area.y0(height);
 
         g.append("path")
-            .datum([newBboTimesArray])
+            .datum([chartData])
             .attr("fill", "steelblue")
             .attr("d", area);
 
